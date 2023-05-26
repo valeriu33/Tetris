@@ -4,10 +4,6 @@ open System
 open FSharpPlus
 open FSharpPlus.Lens
 
-type MapPixel =
-    | Empty
-    | Ground
-
 type Position = { x: decimal; y: decimal }
 module Position =
     let inline _x f p =
@@ -23,6 +19,17 @@ type FigureType =
     | S
     | T
     | Z
+
+// type Ground =
+//     | WasFigure of FigureType
+
+type MapPixel =
+    | Empty
+    | Ground of FigureType
+    member this.isGround =
+        match this with
+        | Ground _ -> true
+        | Empty -> false
 
 type Rotation =
     | Deg_0
@@ -48,6 +55,7 @@ type Figure = {
     Type: FigureType
     Rotation: Rotation
 }
+
 module Figure =
     let inline public _position f p =
         f p.Position <&> fun x -> { p with Position = x }
@@ -292,10 +300,10 @@ module Figure =
     let isGroundedPosition figure (map: MapPixel[,]) =
         getFigurePoints figure |> List.exists (fun (x, y) ->
                 (int y + 1 >= Array2D.length2 map)
-                || (map[int x, int y + 1] = MapPixel.Ground)
+                || (map[int x, int y + 1].isGround)
                 )
    
     let isGameOverPosition figure (map: MapPixel[,]) =
         getFigurePoints figure |> List.exists (fun (x, y) ->
-                map[int x, int y] = MapPixel.Ground
+                map[int x, int y].isGround
                 )

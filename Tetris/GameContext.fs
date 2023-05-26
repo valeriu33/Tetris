@@ -12,6 +12,7 @@ type GameAction =
     | FastDown
     | NoAction
      
+     
 type GameContext = {
     ExitGame: bool
     Map: MapPixel [,]
@@ -36,35 +37,34 @@ let inline _figureType g =
 let inline rotate g =
     _changeFigure << Figure._rotation <| g
 
-let addGroundToMap (map: MapPixel[,]) (points: (decimal*decimal) list) =
+let addGroundToMap (map: MapPixel[,]) (figure: Figure) =
+    let points = Figure.getFigurePoints figure
     map |> Array2D.mapi (fun x y pixel -> if (points
                                               |> List.map (fun (x, y) -> (int x, int y))
                                               |> List.contains (x, y)) then
-                                                MapPixel.Ground
+                                                MapPixel.Ground figure.Type
                                           else
                                                 pixel)
 
-let checkAndReturnLineComplete (map: MapPixel[,]): int list =
+let checkAndReturnLinesComplete (map: MapPixel[,]): int list =
      [0 .. Array2D.length2 map - 1]
      |> List.filter (fun y -> 
          [0 .. Array2D.length1 map - 1]
-         |> List.forall (fun x -> map[x, y] = MapPixel.Ground))
+         |> List.forall (fun x -> map[x, y].isGround))
 
 let removeLineFromMap (map: MapPixel[,]) lineNum =
-    let newMap =
-        map
-        |> Array2D.mapi (fun _ y pixel -> if (y = lineNum) then MapPixel.Empty else pixel)
-
-    // [|Array2D.length2 newMap - 1 .. 1|]
-    // |> Array.map (fun y ->
-        // [|Array2D.length1 newMap - 1 .. 0|]
-        // |> Array.map (fun x -> newMap[x, y - 1]))
-    // |> array2D
-    for y = Array2D.length2 newMap - 1 downto 1 do // TODO: rewrite in a immutable way
-        for x = Array2D.length1 newMap - 1 downto 0 do
-            if (y <= lineNum) then newMap[x, y] <- newMap[x, y - 1]
-    
-    newMap
+    // Move down the ground above the line
+    [|0 .. Array2D.length1 map - 1|]
+    |> Array.map (fun x ->
+        [|0 .. Array2D.length2 map - 1|]
+        |> Array.map (fun y ->
+            if y <= lineNum then
+                if y <> 0 then
+                    map[x, y - 1]
+                    else map[x, y]
+            else map[x, y])
+        )
+    |> array2D
           
 let init() =
     let map = Array2D.init 10 16 (fun _ _ -> MapPixel.Empty)

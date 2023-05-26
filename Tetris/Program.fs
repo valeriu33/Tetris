@@ -38,9 +38,9 @@ module Game =
                     gameContext
                     |> setl _y_position (gameContext.ActiveFigure.Position.y + playerSpeed)
                 if Figure.isGroundedPosition fastDownGC.ActiveFigure fastDownGC.Map then
-                    let newMap = addGroundToMap fastDownGC.Map (Figure.getFigurePoints fastDownGC.ActiveFigure)
+                    let newMap = addGroundToMap fastDownGC.Map (fastDownGC.ActiveFigure)
                     let mapCompleteLine =
-                        checkAndReturnLineComplete newMap
+                        checkAndReturnLinesComplete newMap
                         |> List.fold removeLineFromMap newMap
                     fastDownGC
                     |> setl _changeMap mapCompleteLine
@@ -53,12 +53,11 @@ module Game =
         // TODO: It is repeating the FastDown
         let gravityMovedGC = playerMovedGC |> setl _y_position (playerMovedGC.ActiveFigure.Position.y + fallingSpeed)
         if Figure.isGroundedPosition gravityMovedGC.ActiveFigure gravityMovedGC.Map then
-            let mapAddGround = addGroundToMap gravityMovedGC.Map (Figure.getFigurePoints gravityMovedGC.ActiveFigure)
+            let mapAddGround = addGroundToMap gravityMovedGC.Map (gravityMovedGC.ActiveFigure)
             // 
             let mapCompleteLine =
-                checkAndReturnLineComplete mapAddGround
+                checkAndReturnLinesComplete mapAddGround
                 |> List.fold removeLineFromMap mapAddGround
-            
             let returnGC =
                 gravityMovedGC
                 |> setl _changeMap mapCompleteLine
@@ -77,23 +76,34 @@ module Game =
 let rec main gameContext =
     
     if gameContext.ExitGame then
-        Renderer.drawGameOver
+        Renderer.drawGameOver ()
         Environment.Exit 0
     Console.Clear()
     Renderer.renderMap gameContext
     Threading.Thread.Sleep(150)
     
     if Console.KeyAvailable then
+        // while(Console.KeyAvailable) do
+        //     Console.ReadKey(false) |> ignore // skips previous input chars
         match Console.ReadKey().Key with
-        | ConsoleKey.Q -> Renderer.drawGameOver; Environment.Exit 0
-        | ConsoleKey.UpArrow ->
+        | ConsoleKey.Q -> Renderer.drawGameOver (); Environment.Exit 0
+        | ConsoleKey.UpArrow
+        | ConsoleKey.W ->
             main(Game.gameLoop({ gameContext with Action = GameAction.Rotate }))
-        | ConsoleKey.DownArrow ->
+        | ConsoleKey.DownArrow
+        | ConsoleKey.S ->
             main(Game.gameLoop({ gameContext with Action = GameAction.FastDown }))
-        | ConsoleKey.LeftArrow ->
+        | ConsoleKey.LeftArrow
+        | ConsoleKey.A ->
             main(Game.gameLoop({ gameContext with Action = GameAction.Left }))
-        | ConsoleKey.RightArrow ->
+        | ConsoleKey.RightArrow
+        | ConsoleKey.D ->
             main(Game.gameLoop({ gameContext with Action = GameAction.Right }))
+        | ConsoleKey.P ->
+            Console.Clear()
+            Renderer.drawPause ();
+            let _ = Console.ReadKey()
+            main(Game.gameLoop(gameContext))
         | _ -> main(Game.gameLoop(gameContext))
     else
         main(Game.gameLoop(gameContext))
