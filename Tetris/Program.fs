@@ -16,62 +16,64 @@ module Game =
             | true -> newGC
             | false -> oldGC
         
-        let playerMovedGC = 
-            match gameContext.Action with
-            | Left ->
-                let movedLeftGC =
-                    gameContext 
-                    |> setl _x_position (gameContext.ActiveFigure.Position.x - playerSpeed)
-                returnChangedIfValid (Figure.isValidPosition movedLeftGC.ActiveFigure movedLeftGC.Map) gameContext movedLeftGC
-            | Right ->
-                let movedRightGC =
-                    gameContext
-                    |> setl _x_position (gameContext.ActiveFigure.Position.x + playerSpeed)
-                returnChangedIfValid (Figure.isValidPosition movedRightGC.ActiveFigure movedRightGC.Map) gameContext movedRightGC
-            | Rotate ->
-                let rotatedGC =
-                    gameContext
-                    |> setl rotate ()
-                returnChangedIfValid (Figure.isValidPosition rotatedGC.ActiveFigure rotatedGC.Map) gameContext rotatedGC
-            | FastDown ->
-                let fastDownGC =
-                    gameContext
-                    |> setl _y_position (gameContext.ActiveFigure.Position.y + playerSpeed)
-                if Figure.isGroundedPosition fastDownGC.ActiveFigure fastDownGC.Map then
-                    let newMap = addGroundToMap fastDownGC.Map (fastDownGC.ActiveFigure)
-                    let mapCompleteLine =
-                        checkAndReturnLinesComplete newMap
-                        |> List.fold removeLineFromMap newMap
+        let goDown gc distance=
+            let fastDownGC =
+                gc
+                |> setl _y_position (gc.ActiveFigure.Position.y + distance)
+            if isGroundedPosition fastDownGC.ActiveFigure fastDownGC.Map then
+                let newMap = addGroundToMap fastDownGC.Map (fastDownGC.ActiveFigure)
+                let mapCompleteLine =
+                    checkAndReturnLinesComplete newMap
+                    |> List.fold markLineToDelete newMap
+                let returnGC =
                     fastDownGC
                     |> setl _changeMap mapCompleteLine
                     |> setl _changeFigure (Figure.getNewFigure())
+                if isGameOverPosition returnGC.ActiveFigure returnGC.Map then
+                    returnGC |> setl _exitGame true
                 else
-                    fastDownGC
-            | NoAction -> gameContext
-        
-        
-        // TODO: It is repeating the FastDown
-        let gravityMovedGC = playerMovedGC |> setl _y_position (playerMovedGC.ActiveFigure.Position.y + fallingSpeed)
-        if Figure.isGroundedPosition gravityMovedGC.ActiveFigure gravityMovedGC.Map then
-            let mapAddGround = addGroundToMap gravityMovedGC.Map (gravityMovedGC.ActiveFigure)
-            // 
-            let mapCompleteLine =
-                checkAndReturnLinesComplete mapAddGround
-                |> List.fold removeLineFromMap mapAddGround
-            let returnGC =
-                gravityMovedGC
-                |> setl _changeMap mapCompleteLine
-                |> setl _changeFigure (Figure.getNewFigure())
-                |> setl _changeAction GameAction.NoAction
-            
-            if Figure.isGameOverPosition returnGC.ActiveFigure returnGC.Map then
-                returnGC |> setl _exitGame true
+                    returnGC
             else
-                returnGC
-        else
-            gravityMovedGC
-            |> setl _changeAction GameAction.NoAction
-            
+                fastDownGC
+        
+        let map =
+            if hasLineToDelete gameContext.Map then
+                checkAndReturnLinesComplete gameContext.Map
+                 |> List.fold removeLineFromMap gameContext.Map
+            else
+                gameContext.Map
+
+        let cleanGC = gameContext |> setl _changeMap map
+        
+        let playerMovedGC = 
+            match cleanGC.Action with
+            | Left ->
+                let movedLeftGC =
+                    cleanGC 
+                    |> setl _x_position (cleanGC.ActiveFigure.Position.x - playerSpeed)
+                returnChangedIfValid (isValidPosition movedLeftGC.ActiveFigure movedLeftGC.Map) cleanGC movedLeftGC
+            | Right ->
+                let movedRightGC =
+                    cleanGC
+                    |> setl _x_position (cleanGC.ActiveFigure.Position.x + playerSpeed)
+                returnChangedIfValid (isValidPosition movedRightGC.ActiveFigure movedRightGC.Map) cleanGC movedRightGC
+            | Rotate ->
+                let rotatedGC =
+                    cleanGC
+                    |> setl rotate ()
+                returnChangedIfValid (isValidPosition rotatedGC.ActiveFigure rotatedGC.Map) cleanGC rotatedGC
+            | FastDown ->
+                goDown cleanGC playerSpeed
+            | NoAction -> cleanGC
+        
+
+        
+        // let finalGC =
+        goDown playerMovedGC fallingSpeed
+        |> setl _changeAction GameAction.NoAction
+        
+        
+        
         
 let rec main gameContext =
     

@@ -4,7 +4,20 @@ open Tetris.Figure
 open FSharpPlus
 open FSharpPlus.Lens
 open Microsoft.FSharp.Core
-    
+
+type Ground = {
+    FigureType: FigureType
+    IsToDelete: bool
+}
+
+type MapPixel =
+    | Empty
+    | GroundPixel of Ground
+    member this.isGround =
+        match this with
+        | GroundPixel _ -> true
+        | Empty -> false
+        
 type GameAction =
     | Left
     | Right
@@ -37,12 +50,31 @@ let inline _figureType g =
 let inline rotate g =
     _changeFigure << Figure._rotation <| g
 
+let isValidPosition figure (map: MapPixel[,]) =
+    Figure.getFigurePoints figure |> List.forall (fun (x, y) ->
+            int y < Array2D.length2 map
+            && int x < Array2D.length1 map
+            && int x >= 0
+            && map[int x, int y] = MapPixel.Empty
+            )
+
+let isGroundedPosition figure (map: MapPixel[,]) =
+    Figure.getFigurePoints figure |> List.exists (fun (x, y) ->
+            (int y + 1 >= Array2D.length2 map)
+            || (map[int x, int y + 1].isGround)
+            )
+
+let isGameOverPosition figure (map: MapPixel[,]) =
+    Figure.getFigurePoints figure |> List.exists (fun (x, y) ->
+            map[int x, int y].isGround
+            )
+
 let addGroundToMap (map: MapPixel[,]) (figure: Figure) =
     let points = Figure.getFigurePoints figure
     map |> Array2D.mapi (fun x y pixel -> if (points
                                               |> List.map (fun (x, y) -> (int x, int y))
                                               |> List.contains (x, y)) then
-                                                MapPixel.Ground figure.Type
+                                                MapPixel.GroundPixel {FigureType = figure.Type; IsToDelete = false}
                                           else
                                                 pixel)
 
@@ -52,6 +84,33 @@ let checkAndReturnLinesComplete (map: MapPixel[,]): int list =
          [0 .. Array2D.length1 map - 1]
          |> List.forall (fun x -> map[x, y].isGround))
 
+let checkAndReturnLinesToDelete (map: MapPixel[,]) =
+     [0 .. Array2D.length2 map - 1]
+     |> List.filter (fun y ->
+             match map[0, y] with
+             | GroundPixel {IsToDelete = false } -> true
+             | _ -> false)
+
+
+let hasLineToDelete (map: MapPixel[,]) =
+    [0 .. Array2D.length2 map - 1]
+     |> List.exists (fun y ->
+         match map[0, y] with
+         | GroundPixel {IsToDelete = false } -> true
+         | _ -> false
+         )
+     
+let markLineToDelete (map: MapPixel[,]) lineNum =
+    map |> Array2D.mapi (fun _ y i ->
+            if y = lineNum then
+                match i with
+                | GroundPixel {FigureType = f; IsToDelete = _} ->
+                     GroundPixel {FigureType = f; IsToDelete = true}
+                | _ -> i
+            else
+                i
+        )
+        
 let removeLineFromMap (map: MapPixel[,]) lineNum =
     // Move down the ground above the line
     [|0 .. Array2D.length1 map - 1|]
@@ -72,5 +131,5 @@ let init() =
         ExitGame = false
         Map = map
         Action = GameAction.NoAction
-        ActiveFigure = { Position = {x = 2; y = 2}; Rotation = Rotation.Deg_0; Type = Figure.getRandomFigureType () }
+        ActiveFigure = Figure.getNewFigure()
     }

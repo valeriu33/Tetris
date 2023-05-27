@@ -20,17 +20,6 @@ type FigureType =
     | T
     | Z
 
-// type Ground =
-//     | WasFigure of FigureType
-
-type MapPixel =
-    | Empty
-    | Ground of FigureType
-    member this.isGround =
-        match this with
-        | Ground _ -> true
-        | Empty -> false
-
 type Rotation =
     | Deg_0
     | Deg_90
@@ -287,23 +276,5 @@ module Figure =
                 ]
      
     let getNewFigure () =
-        { Position = { x = 4m; y = 1m }; Rotation = Deg_0; Type = getRandomFigureType () } 
-    
-    let isValidPosition figure (map: MapPixel[,]) =
-        getFigurePoints figure |> List.forall (fun (x, y) ->
-                int y < Array2D.length2 map
-                && int x < Array2D.length1 map
-                && int x >= 0
-                && map[int x, int y] = MapPixel.Empty
-                )
-    
-    let isGroundedPosition figure (map: MapPixel[,]) =
-        getFigurePoints figure |> List.exists (fun (x, y) ->
-                (int y + 1 >= Array2D.length2 map)
-                || (map[int x, int y + 1].isGround)
-                )
-   
-    let isGameOverPosition figure (map: MapPixel[,]) =
-        getFigurePoints figure |> List.exists (fun (x, y) ->
-                map[int x, int y].isGround
-                )
+        { Position = { x = 4m; y = 1m }; Rotation = Deg_0; Type = getRandomFigureType () }
+        
