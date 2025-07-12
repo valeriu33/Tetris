@@ -9,7 +9,7 @@ module Position =
     let inline _x f p =
         f p.x <&> fun x -> { p with x = x }
     let inline _y f p =
-        f p.y <&> fun x -> { p with y = x }
+        (f p.y) <&> (fun x -> { p with y = x })
         
 type FigureType =
     | I
@@ -189,7 +189,7 @@ module Figure =
                  (figure.Position.x + 1m, figure.Position.y + 1m)
                 ]
         | S ->
-             match figure.Rotation with
+            match figure.Rotation with
             // □  
             // □ ■
             //   □
